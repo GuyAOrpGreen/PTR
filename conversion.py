@@ -281,7 +281,11 @@ def SATSolverFormat(KnowB):
     KB=KnowB
     KBno= convertLettersToNo(listOfUniqueAtomsLetters(KB), convertLettersListToNo(listOfUniqueAtomsLetters(KB)), convertCNFArray(KB))
     return convertForSAT(KBno)
-
+def SATSolverFormatLM(KnowB, letters):
+    KB=KnowB
+    lettes=letters
+    KBno= convertLettersToNo(lettes, convertLettersListToNo(lettes), convertCNFArray(KB))
+    return convertForSAT(KBno)
 a=[]
 b=[]
 c=[]
