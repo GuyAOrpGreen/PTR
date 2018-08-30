@@ -167,6 +167,28 @@ def removeContradictoryInterpretations(interpretations, knowB):# Should seperate
    
     return finalkb
 
+def removeContradictoryInterpretationsLM(interpretations, knowB, letters):# Should seperate this functionn into converting letters and check
+    inte=interpretations
+    kb=knowB
+    letters=letters
+    check=False
+    for inter in inte:
+        for numbers in inter:
+            if type(numbers)==int:
+                check=True
+    if (check):
+        newkb=convertInterpretationsToLetters(inte, kb)
+    else:
+        newkb=inte
+        
+    finalkb=[]
+    
+    for i in newkb:#this where my first bug is 
+        if (checkInterpretationsLM(i, kb, letters)):
+            finalkb.append(i)
+   
+    return finalkb
+
 def moveInterpretations(interpretations, knowB):
     inte=interpretations
     kb=knowB
@@ -189,7 +211,25 @@ def moveInterpretations(interpretations, knowB):
    
     return finalkb
 
-
+def checkInterpretationsLM(interpretations, knowB, lettes):
+    inte=conversion.SATSolverFormat(interpretations)
+    kb=knowB
+    letters=lettes
+    m=minisolvers.MinisatSolver()
+    KBno=conversion.SATSolverFormatLM(kb, letters)
+    for i in range(len(letters)):
+        m.new_var()
+    
+    for clause in KBno:
+        m.add_clause(clause)
+    
+    for clause2 in inte:
+        m.add_clause(clause2)
+        
+    if (m.solve()):
+        return True
+    else:
+        return False
 
 def checkInterpretations(interpretations, knowB):
     inte=conversion.SATSolverFormat(interpretations)
@@ -218,65 +258,116 @@ def checkEntailment(knowB, sentence):
     sen=sentence
     #Might have to add negation to sen
     uni=conversion.listOfUniqueAtomsLetters(KB)
+    Ent=minisolvers.MinisatSolver()
     uniNo=conversion.convertLettersListToNo(uni)
     check=addNegation(sen, uniNo, uni)
-    #print(check)
     for i in check:
         KBno.append(i)
         
     
     for i in range(uniqueVar):
-        S.new_var()
+        Ent.new_var()
 
     for clause in KBno:
-        S.add_clause(clause)
+        Ent.add_clause(clause)
         
-    if (S.solve()):
+    if (Ent.solve()):
         return False
     else:
         return True
-
-
+""""def checkInLM(interp, knowb):
+    LMEnt=minisolvers.MinisatSolver()
+    KB=knowb
+    inte=interp
+    uniqueVar=conversion.noOfUniqueAtomsLetters(inte)
+    letters=conversion.listOfUniqueAtomsLetters(inte)
+    numbers=conversion.convertLettersListToNo(letters)
+    inte=conversion.SATSolverFormat(inte)
+    KB=addNegation(sen,numbers, letters)"""
 def LMEntailment(KnowB, sentence):
     KB=KnowB
-    letters=conversion.listOfUniqueAtomsLetters(KB)
-    uniqueVar=conversion.noOfUniqueAtomsLetters(KB)
-    numbers=conversion.convertLettersListToNo(letters)
+    
+    
+    lll=conversion.listOfUniqueAtomsLetters(KB)
     RM=createRankedModel(KB)
     sen=sentence
-    typ=TypicalityLetters(RM, letters)
-    LMEnt=minisolvers.MinisatSolver()
-    for i in sen:
-        if i.isalpha():
-            letter=i
-            break
-    for i in typ:
-        if (letter in typ[i]):
-            level=RM[i]
-            break
+    if hasTypicalityOperator(sen):
+        typ=TypicalityLetters(RM, letters)
+        check=False
+        letter=[]
+        for i in sen:
+            if i=="*":
+                check=True
+            elif (i.isalpha()) and (check):
+                letter.append(i)
+                check=False
+        check2=False
+        for j in typ:
+            for k in letter:
+                if (k in typ[j]) and (check2==False):
+                    level=j
+                    check2=True
+                elif(k in typ[j]) and (j!=level) and (check2):
+                    return False
+        print(level)
+        releventInterpretations=RM[level]
+        if sen.find(">")!=-1:
+            left=[]
+            left.append(sen[:sen.index(">")])
+            releventInterpretations=removeContradictoryInterpretationsLM(releventInterpretations, left, lll)
+        for inte in releventInterpretations:
+            if (checkEntailment(inte, sen)==False):
+                return False
+        return True
+        #gotta check interpretations with sentence still
+                
+                
+                    
+        # Maybe do this 
+                
+    #create a new one check interpretations
     
-    for i in range(uniqueVar):
-        LMEnt.new_var()
+    else:
+        #gotta check every level of ranked model
+        for lmao in RM:
+            rellev=RM[lmao]
+            if (len(rellev)==0):
+                return True #not checking only interpretations that are true for what is being checked
+            for okay in rellev:
+                if (checkEntailment(okay, sen)==False):
+                    return False
     
-    for lol in level:
-           lol=conversion.SATSolverFormat(lol)
-           for j in lol:
-               LMEnt.add_clause(j)
+    #for i in sen:
+     #   if i.isalpha():
+      #      letter=i
+       #     break
+    #for i in typ:
+     #   if (letter in typ[i]):
+      #      level=RM[i]
+       #     break
+    
+    #for i in range(uniqueVar):
+     #   LMEnt.new_var()
+    
+    #for lol in level:
+      #     lol=conversion.SATSolverFormat(lol)
+     #      for j in lol:
+    #           LMEnt.add_clause(j)
            
-    sen=addNegation(sen,numbers, letters)
+   # sen=addNegation(sen,numbers, letters)
     
     
     
-    for i in sen:
-        LMEnt.add_clause(i)
+    #for i in sen:
+     #   LMEnt.add_clause(i)
         
     #for clause in newlevel:
      #   LMEnt.add_clause(clause)
         
-    if (LMEnt.solve()):
-        return False
-    else:
-        return True
+    #if (LMEnt.solve()):
+     #   return False
+   # else:
+    #    return True
 
 def checkConsistency(knowB):
     KB=knowB
@@ -299,7 +390,7 @@ def addNegation(sentence, listOfNumbers, letters):
     sent.append(sentence)
     numbers=listOfNumbers
     ll=letters
-    sent=conversion.SATSolverFormat(conversion.convertLettersToNo(ll,numbers, conversion.convertCNF(sent)))
+    sent=conversion.SATSolverFormat(conversion.convertLettersToNo(ll, numbers, conversion.convertCNFArray(sent)))
     newSent=[]
     andSent=[]
     if len(sent)==1:
@@ -321,7 +412,7 @@ KnowB=["(p)>(b)", "(*b)>(f)", "(*p)>(-f)"]
 KnowB3=["(p)>(b)", "(b)>(*f)", "(p)>(-f)"]
 #print(conversion.SATSolverFormat(KnowB))
 KnowB2=["p>b", "*b>f", "*p>-f"]
-sen='(p)>(-f)'
+sen='(*p)>(*b)'
 #print(conversion.SATSolverFormat(KnowB2))
 inter=createInterpretations(KnowB)
 #print(len(inter))
@@ -329,24 +420,40 @@ inter=createInterpretations(KnowB)
 #print(removeContradictoryInterpretations(inter,KnowB))
 #nte=createInterpretations(KnowB2)
 letters=conversion.listOfUniqueAtomsLetters(KnowB)
+numbers=conversion.convertLettersListToNo(letters)
+'''
+print(letters)
+print(numbers)
+print(addNegation('(*p)>(f)',numbers ,letters))
+print()
+print(conversion.SATSolverFormatLM(['(*p)>(f)'], letters))
+'''
+
 #inte=[['-p','b','-f'],['p','-b','-f'],['p','-b','f'],['p','b','-f'],['p','b','-f']]
 #satisfiable=removeContradictoryInterpretations(inte, KnowB2)
 #print(satisfiable)
-RM2=createRankedModel(KnowB3)
-RM=createRankedModel(KnowB)
+
+
+
 if (LMEntailment(KnowB, sen)):
     print('entailment FTW')
 else:
     print('Fuck')
-#for k in RM2:
- #   print(k)
-  #  print(RM2[k])
-#print()
-#print("This is what it should produce")
-#for i in RM:
- #   print(i)
-  #  print(RM[i])
 
+
+'''
+
+RM2=createRankedModel(KnowB3)
+RM=createRankedModel(KnowB)
+for k in RM:
+    print(k)
+    print(RM[k])
+print()
+print("This is what it should produce")
+for i in RM2:
+    print(i)
+    print(RM2[i])
+'''
 #print("")
 #print(TypicalityLetters(RM,letters))
 #print(len(RM))
