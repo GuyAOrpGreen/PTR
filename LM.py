@@ -30,10 +30,18 @@ def createRankedModel(knowB):
                 nonTypical=checkNonTypicalLetters(rankedModel, letters)
                 for sentence in KB:
                     if (hasTypicalityOperator(sentence)):
-                        iOfT=sentence.index("*")
-                        if sentence[iOfT+1] in nonTypical:
-                            sentence=sentence.replace(sentence[iOfT]+sentence[iOfT+1],"-"+sentence[iOfT+1]+'&'+sentence[iOfT+1])
+                        for atomTyp in letters:
+                            if (sentence.find('*'+atomTyp)!=-1):
+                                iOfT=sentence.index('*'+atomTyp)
+                                if atomTyp in nonTypical:
+                                    sentence=sentence.replace(sentence[iOfT]+sentence[iOfT+1],"(-"+sentence[iOfT+1]+')&('+sentence[iOfT+1]+')')
+                                    
+                        #iOfT=sentence.index("*")
+                        #if sentence[iOfT+1] in nonTypical:
+                         #   sentence=sentence.replace(sentence[iOfT]+sentence[iOfT+1],"(-"+sentence[iOfT+1]+')&('+sentence[iOfT+1]+')')
+                          #  print(sentence)
                     tempkb.append(sentence)
+                    
                # print("Before")
                # print(rankedModel[counter])
                # print("Before")
@@ -46,15 +54,17 @@ def createRankedModel(knowB):
                 #print(rankedModel[counter+1])
                 #print("")
                 #print(rankedModel[counter])
-                #print("")
-                #Make a list of letters that typicality sentences have already been changed for and check that.
-            
-                
+                #Add code to break if you are moving nothing
             counter+=1
-          #  print("No idea yet")
           #  counter+=1
     return rankedModel
 
+def indOfTypicality(sen):
+    indOfTyp=[]
+    for i in range(len(sen)):
+        if (sen[i]=='*'):
+            indOfTyp.append(i)
+    return indOfTyp
 def checkNonTypicalLetters(rankedModel, letters):
     rm=rankedModel
     l=letters
@@ -411,8 +421,10 @@ def addNegation(sentence, listOfNumbers, letters):
 KnowB=["(p)>(b)", "(*b)>(f)", "(*p)>(-f)"]
 KnowB3=["(p)>(b)", "(b)>(*f)", "(p)>(-f)"]
 #print(conversion.SATSolverFormat(KnowB))
-KnowB2=["p>b", "*b>f", "*p>-f"]
-sen='(*p)>(*b)'
+#KnowB2=["(*b)>(f)", "(p)>(b)", "(*p)>(-f)",'(o)>(b)', '(*o)>(-f)','(e)>(-*f)', '(e)>(-b)', '(l)>(*b)', '(*f)>(w)']
+KnowB2=["(*b)>(f)",'(e)>(-*f)', '(e)>(-b)', '(*f)>(w)']
+KnowB4=['(*t)>(-p&-r)', '(t)>(p|-p)', '(-p|t)&(p|t)', '(*p)>(*y)', '(y)>(-f)', '(-f)>(y)', '(*r)>(*f)']
+sen='(e)>(w)'
 #print(conversion.SATSolverFormat(KnowB2))
 inter=createInterpretations(KnowB)
 #print(len(inter))
@@ -433,13 +445,16 @@ print(conversion.SATSolverFormatLM(['(*p)>(f)'], letters))
 #satisfiable=removeContradictoryInterpretations(inte, KnowB2)
 #print(satisfiable)
 
-
-
-if (LMEntailment(KnowB, sen)):
+'''
+if (LMEntailment(KnowB2, sen)):
     print('entailment FTW')
 else:
     print('Fuck')
-
+'''
+RM=createRankedModel(KnowB2)
+for k in RM:
+    print(k)
+    print(RM[k])
 
 '''
 
