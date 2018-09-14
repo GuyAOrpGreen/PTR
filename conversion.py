@@ -6,6 +6,7 @@ Created on Tue Jul 10 14:37:30 2018
 """
 
 def listOfUniqueAtomsLetters(listOfAtoms):
+    """A function returning a list of the unique atoms in a Knowledge Base"""
     stra=listOfAtoms
     atoms=[]
     for i in stra:
@@ -19,6 +20,7 @@ def listOfUniqueAtomsLetters(listOfAtoms):
     return atoms
 
 def noOfUniqueAtomsLetters(listOfAtoms):
+    """A function returning the number of Unique Atoms there are in a knowledge base"""
     stra=listOfAtoms
     counter=0
     atoms=[]
@@ -36,6 +38,7 @@ def noOfUniqueAtomsLetters(listOfAtoms):
 
 #Probably redundant. Can Just use index of letters or index+1
 def convertLettersListToNo(listOfAtoms):
+    """A function that returns a list of numbers corresponding to each atom to help with the conversion to SAT-Solver Format"""
     letters=listOfAtoms
     numbers=[]
     counter=1
@@ -45,6 +48,7 @@ def convertLettersListToNo(listOfAtoms):
     return numbers
 
 def distributeNegation(sentence):
+    """A function that propogates the negation to the innermost brackets and then returns the sentence"""
     sen= sentence
     newsen=sen
     sen=sen.replace('--','')
@@ -72,11 +76,13 @@ def distributeNegation(sentence):
         for i in range(ind, len(newsen)):
             if (newsen[i+counter1]==")") and (counter==0):
                 break
-            elif (newsen[i+counter1]=='('):
+            elif (newsen[i+counter1]=='(') and (counter==0):
                 counter+=1
                 #print(newsen[:i+counter1]+'-'+newsen[i+counter1:])
                 newsen=newsen[:i+counter1]+'-'+newsen[i+counter1:]
                 counter1+=1
+            elif (newsen[i+counter1]=='('):
+                counter+=1
             elif (newsen[i+counter1]==')'):
                 counter-=1
             elif (newsen[i+counter1]=='|') and (counter==0):
@@ -87,6 +93,7 @@ def distributeNegation(sentence):
         return newsen[:sen.index('-(')] + distributeNegation(newsen[newsen.index('-(')+1:])
  
 def convertForSAT(KB):
+    """A function that converts the Knowledge Base to SAT-Solver Format and then returns the list"""
     returnedKB=[]
     actualKB=KB
     check=False
@@ -111,6 +118,7 @@ def convertForSAT(KB):
     return returnedKB
 
 def convertLettersToNo(listOfLetters, listOfNumbers, KB):
+    """Converts the Knowledge Base to be in terms of the corresponding Numbers rather than letters"""
     newKB=[]
     letters=listOfLetters
     numbers=listOfNumbers
@@ -121,12 +129,10 @@ def convertLettersToNo(listOfLetters, listOfNumbers, KB):
         newKB.append(newSentence)
     return newKB
 
-def convertAnd(Sentence):
-    return False
-
 
 
 def convertCNFBetter(Sentence):
+    """Converts a sentence to CNF and returns it"""
     sen=Sentence
     if "(" in sen:
         if ">" in sen:
@@ -162,7 +168,35 @@ def convertCNFBetter(Sentence):
         sen=sen.replace(">", "|")
         sen= '-'+sen
     return sen
- 
+
+def convertCNFBetterBetter(Sentence):
+    """Converts a sentence to CNF and returns it"""
+    sen=Sentence
+    if "(" in sen:
+        if ">" in sen:
+            newsen=sen
+            bracketPair=bracketPairsBetter(sen)
+            counter=0
+            
+            for i in range(len(bracketPair)):                
+                ind1=bracketPair[i][0]
+                ind2=bracketPair[i][2]
+                if (newsen[ind1-1]=='>'):
+                    newsen=newsen[:ind2]+'-'+newsen[ind2:]
+                    newsen=newsen[:ind1]+'|'+newsen[ind1+1:]
+                    counter+=ind2
+                        
+                    for badcode in bracketPair:
+                        for k in range(len(badcode)):
+                            if (badcode[k]>counter):
+                                badcode[k]+=1
+                    counter=0
+                    
+            return newsen
+    elif ">" in sen:
+        sen=sen.replace(">", "|")
+        sen= '-'+sen
+    return sen 
 #This works for basic implication but not for complex implications atm
 #Feel like this is the main code I need to edit :thinking:
 #Including brackets in this 
@@ -191,13 +225,81 @@ def convertCNF(sentence):
     return sen
 
 def convertCNFArray(KB):
+    """Calls convertCNFBetter for each sentence in a Knowledge Base"""
     lol=KB
     final=[]
     for i in KB:
-        okay=distributeNegation(convertCNFBetter(i))
-        final.append(hardcode(okay))
+        okay=distributeNegation(convertCNFBetterBetter(i))
+        final.append(propogateDisjunction(okay))
     return final
 
+def propogateDisjunctionNeeded(sen):
+    bracketPairs=bracketPairsBetter(sen)
+    check=False
+    for i in bracketPairs:
+        if (sen[i[0]-1]=='&') & (check):
+            if (i[0]-1>checker[0] and i[0]-1<checker[1]) or (i[0]-1>checker[2] and i[0]-1<checker[3]):
+                return True
+        elif sen[i[0]-1] == '|':
+            check=True
+            checker=i
+    return False
+
+def propogateDisjunction(sen):
+    bracketPairs=bracketPairsBetter(sen)
+    newsen=sen
+    check=False
+    if (propogateDisjunctionNeeded(sen)):
+        for i in bracketPairs:
+            if (sen[i[0]-1]=='&') & (check):
+                if (i[0]-1>checker[0] and i[0]-1<checker[1]) or (i[0]-1>checker[2] and i[0]-1<checker[3]):
+                    andind=i[0]-1
+                    break
+            elif sen[i[0]-1] == '|':
+                orind=i[0]-1
+                check=True
+                checker=i
+        #print(andind)
+        #print(orind)
+        if (orind>andind):
+            #print("Life")
+            relevantInd=[]
+            relevantIndbigger=[]
+            for x in bracketPairs:
+                if (x[0]+1==andind) or (x[0]-1==andind):
+                    relevantInd=x
+                    break
+            
+            for y in  bracketPairs:
+                if (y[0]+1==orind) or (y[0]-1==orind):
+                    relevantIndbigger=y
+                    break
+            #print(relevantInd)
+            #print(relevantIndbigger)
+            firstPart='('+sen[relevantInd[2]:relevantInd[3]+1]+'|'+sen[relevantIndbigger[0]:relevantIndbigger[1]+1]+')'
+            secondPart='('+sen[relevantInd[0]:relevantInd[1]+1]+'|'+sen[relevantIndbigger[0]:relevantIndbigger[1]] +')'
+            newsen=sen[:relevantIndbigger[2]]+firstPart+"&"+secondPart+sen[relevantIndbigger[1]:]
+            #print(newsen)
+            return propogateDisjunction(newsen)
+        else:
+            relevantInd=[]
+            relevantIndbigger=[]
+            for x in bracketPairs:
+                if (x[0]+1==andind) or (x[0]-1==andind):
+                    relevantInd=x
+                    break
+            
+            for y in  bracketPairs:
+                if (y[0]+1==orind) or (y[0]-1==orind):
+                    relevantIndbigger=y
+                    break
+            firstPart='('+sen[relevantInd[2]:relevantInd[3]+1]+'|'+sen[relevantIndbigger[2]:relevantIndbigger[3]+1]+')'
+            secondPart='('+sen[relevantInd[0]:relevantInd[1]+1]+'|'+sen[relevantIndbigger[2]:relevantIndbigger[3]+1]
+            newsen=sen[:relevantIndbigger[2]]+firstPart+'&'+secondPart+sen[relevantIndbigger[1]:]
+            return propogateDisjunction(newsen)
+    else:
+        return sen
+###############################################################################################
 def bracketPairs(life):
     bracketPairs=[]
     bracket=[]
@@ -215,10 +317,37 @@ def bracketPairs(life):
         counter+=1
     return bracketPairs
     
-def bracketPairPair(bracketpair):
-    bp=bracketpair
-    print(bp)
-    return "This shit doesn't work Guy.  Why are you testing it????"
+def bracketPairsBetter(bracketpair):
+    bracketPairs=[]
+    bracket=[]
+    bracketIndex=[]
+    counter=0
+    bracketPairsPaired=[]
+    for letter in bracketpair:
+        if letter=="(":
+            bracket.append(counter)
+        elif letter==")":
+            bracketIndex.append(bracket[-1])
+            bracketIndex.append(counter)
+            bracket.remove(bracket[-1])
+            bracketPairs.append(bracketIndex)
+            bracketIndex=[]
+        counter+=1
+    bracketPairs=bracketPairs[::-1]
+    for i in  range(len(bracketPairs)):
+        currentBrackets=[]
+        ind1=bracketPairs[i][0]
+        for j in range(len(bracketPairs)):
+            if (bracketPairs[j][1]+2==ind1):
+                currentBrackets.append(bracketPairs[i][0])
+                currentBrackets.append(bracketPairs[i][1])
+                currentBrackets.append(bracketPairs[j][0])
+                currentBrackets.append(bracketPairs[j][1])
+                bracketPairsPaired.append(currentBrackets)
+    return bracketPairsPaired
+
+
+
 def hardcode(funlife):
     sen = funlife
     counter=0
@@ -292,23 +421,26 @@ c=[]
 #e='(a&b)|(c)'
 #f='a|b'
 g='(a&c)>(b)'
-k='(--a)>(b)'
+k='(a)>(b)'
 l='-(a)>(b)'
 m='--(a)>(b)'
 n='-(-a)>(b)'
+lastTest='((l)&(b))|((p)&(c))'
+lastTest2='(((p)>(b))&((p)>(b)))>(((p)&(b))>((p)&(b)))'
 a.append('a>b>c')
 b.append('(p&-p)>(b)')
 c.append('(b)>(p&-p)')
-d='((p&b)>(a|c))>(a&b)'
+d='(((p)&(b))>((a)|(c)))>((a)&(b))'
 lol='(p&-p)>(b)'
-blol='(b)>(p&-p)'
+blol='(-b)|((p)&(-p))'
+blol2='((p)&(-p))|(-b)'
 KnowB=["(p)>(b)", "(*b)>(f)", "(*p)>(-f)"]
 
     
-ok=distributeNegation(convertCNFBetter(lol))
-ok2=distributeNegation(convertCNFBetter(blol))
-ok3=distributeNegation(convertCNFBetter(k))
-ok4=distributeNegation(convertCNFBetter(d))
+#ok=distributeNegation(convertCNFBetter(lol))
+#k2=distributeNegation(convertCNFBetter(blol))
+#ok3=distributeNegation(convertCNFBetter(k))
+#ok4=distributeNegation(convertCNFBetterBetter(d))
 #print(ok3)
 #print(distributeNegation(convertCNFBetter(l)))
 #print(distributeNegation(convertCNFBetter(m)))
@@ -318,16 +450,27 @@ ok4=distributeNegation(convertCNFBetter(d))
 #print(hardcode(ok2))
 #print(hardcode(ok3))
 #print(hardcode(ok4))
-
+#print(ok)
+#print(ok2)
+#print(ok3)
+#print(ok4)
+#klak='(((p)|(l))&((c)|(l)))&((b)|(c))'
+#print(propogateDisjunctionNeeded(blol))
+#print(propogateDisjunction(blol2))
+#print(convertCNFBetterBetter(lastTest2))
+#wild=distributeNegation(convertCNFBetterBetter(d))
+#print(wild)
+#print(bracketPairsBetter(lastTest))
+#print(propogateDisjunction(lastTest))
 #print(SATSolverFormat(b))
 #print(SATSolverFormat(c))
 #print(SATSolverFormat(KnowB))
 #print(distributeNegation('(-a)!b'))
 #print(distributeNegation('(--a)!b'))
 #print(bracketPairPair(bracketPairs(d)))
-#print(convertCNFBetter(e))
-#print(convertCNFBetter(f))
-#print(distributeNegation(convertCNFBetter(d)))
+#print(convertCNFBetterBetter(k))
+#print(convertCNFBetterBetter(g))
+#print(convertCNFBetterBetter(d))
 #print(distributeNegation(convertCNFBetter(lol)))
 #print(distributeNegation(convertCNFBetter(blol)))
 #print(convertCNFBetter(g))
@@ -335,10 +478,9 @@ ok4=distributeNegation(convertCNFBetter(d))
 #print(convertCNFArray(c))
 #print(convertForSAT(convertLettersToNo(listOfUniqueAtomsLetters(b), convertLettersListToNo(listOfUniqueAtomsLetters(b)), convertCNFArray(b))))
 #print(convertForSAT(convertLettersToNo(listOfUniqueAtomsLetters(c), convertLettersListToNo(listOfUniqueAtomsLetters(c)), convertCNFArray(c))))
-#print(bracketPairs(d))
+#print(bracketPairsBetter(d))
 #KnowB=["a>b","a&b", "a|b", "c>a" ]
 #KBno=convertLettersToNo(listOfUniqueAtomsLetters(KnowB), convertLettersListToNo(listOfUniqueAtomsLetters(KnowB)), convertCNFArray(KnowB))
-#print("This knowledge base has "+str(noOfUniqueAtomsLetters(KnowB))+" unique atoms")
 #print(listOfUniqueAtomsLetters(KnowB))
 #print(convertLettersListToNo(listOfUniqueAtomsLetters(KnowB)))
 #print(KnowB)
